@@ -3,12 +3,18 @@
 import numpy as np
 import cv2
 
-class myBlur():
+class myBlur(object):
     def __init__(self, filename, style):
         self.img = cv2.imread(filename)
         self.style = style
-        self.srcImg = self.img.copy() #tmpImg
+        if style == "SIMPLE_STROKE_STYLE":
+            self.srcImg = cv2.imread(filename, 0)
+        else:
+            self.srcImg = self.img.copy() #tmpImg
 
+########################################################################################################################
+#                                                       COMIC_FITTER                                                   #
+########################################################################################################################
     def skyRegion(self):
         lower_bound = np.array([100, 43, 46], np.uint8)
         upper_bound = np.array([124, 255, 255], np.uint8)
@@ -69,11 +75,69 @@ class myBlur():
         self.seamClone(skyImg)
         return self.ComicBlur()
 
-    def SimpleStrokeModel(self):
-        pass
+########################################################################################################################
+#                                                 SIMPLE_STROKE__FITTER                                                #
+########################################################################################################################
 
+    def dodgeNaive(self, mix_img):
+        return cv2.divide(self.srcImg, 255 - mix_img, scale=256)
+
+    def GRAY2RGB(self, BaseImg):
+        sx, sy = BaseImg.shape
+        tx, ty, tz = self.img.shape
+
+        # 复制灰度图的图层
+        BaseImg2 = np.zeros((sx, sy, 3), np.uint8)
+        BaseImg2[:, :, 0] = BaseImg
+        BaseImg2[:, :, 1] = BaseImg
+        BaseImg2[:, :, 2] = BaseImg
+
+        # 转换颜色空间ycbcr color space
+        nspace1 = cv2.cvtColor(self.img, cv2.COLOR_BGR2YCrCb)
+        nspace2 = cv2.cvtColor(BaseImg2, cv2.COLOR_BGR2YCrCb)
+
+        ms = np.double(nspace1[:, :, 0])
+        mt = np.double(nspace2[:, :, 0])
+        m1 = ms.max()
+        m2 = ms.min()
+        m3 = mt.max()
+        m4 = mt.min()
+        d1 = m1 - m2
+        d2 = m3 - m4
+
+        # 归一化
+        dx1 = ms
+        dx2 = mt
+        dx1 = cv2.divide(dx1 * 255, 255 - d1, scale=1)
+        dx2 = cv2.divide(dx2 * 255, 255 - d2, scale=1)
+        mx, my = dx2.shape
+
+        # Luminance Comparison
+        nimage = np.zeros((sx, sy, 3), np.uint8)
+        for i in range(mx):
+            for j in range(my):
+                iy = dx2[i, j]
+                tmp = abs(dx1 - iy)
+                index = np.where(tmp == np.min(tmp))
+                nimage[i, j, 1] = nspace1[index[0][0], index[1][0], 1]
+                nimage[i, j, 2] = nspace1[index[0][0], index[1][0], 2]
+                nimage[i, j, 0] = nspace2[i, j, 0]
+        dstImg = cv2.cvtColor(nimage, cv2.COLOR_YCrCb2BGR)
+        return dstImg
+
+    def SimpleStrokeModel(self):
+        RevImg = 255 - self.srcImg
+        RevImg = cv2.GaussianBlur(RevImg, (15, 15), 0)
+        dstImg = self.dodgeNaive(RevImg)
+        return self.GRAY2RGB(dstImg)
+
+########################################################################################################################
+#                                                    PORTRAIT__FITTER                                                  #
+########################################################################################################################
     def PortraitModel(self):
         pass
+
+
 
     def applyModel(self):
         if self.style == "COMIC_STYLE":
