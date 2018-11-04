@@ -7,7 +7,7 @@ class myBlur(object):
     def __init__(self, filename, style):
         self.img = cv2.imread(filename)
         self.style = style
-        if style == "SIMPLE_STROKE_STYLE":
+        if style == "SIMPLE_STROKE_STYLE" or style == 1:
             self.srcImg = cv2.imread(filename, 0)
         else:
             self.srcImg = self.img.copy() #tmpImg
@@ -73,6 +73,7 @@ class myBlur(object):
         skyImg = cv2.imread("cloud2.jpg")
         self.skyRegion()
         self.seamClone(skyImg)
+        cv2.imwrite('dstImg.jpg',self.ComicBlur())
         return self.ComicBlur()
 
 ########################################################################################################################
@@ -140,9 +141,9 @@ class myBlur(object):
 
 
     def applyModel(self):
-        if self.style == "COMIC_STYLE":
+        if self.style == "COMIC_STYLE" or self.style == 0:
             self.ComicModel()
-        elif self.style == "SIMPLE_STROKE_STYLE":
+        elif self.style == "SIMPLE_STROKE_STYLE" or self.style == 1:
             self.SimpleStrokeModel()
-        elif self.style == "PORTRAIT_STYLE":
+        elif self.style == "PORTRAIT_STYLE" or self.style == 2:
             self.PortraitModel()
